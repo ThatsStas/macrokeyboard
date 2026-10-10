@@ -38,10 +38,16 @@ INSCRIPT = "http://10.0.0.93:9001/v1/audio/transcriptions"
 
 # Default KEYMAP — customize as needed.
 # Voice keys: ['voice_capture'] or ['voice_capture', {'language': 'de'}]
+# KEYMAP = {
+#     "KEY_A": ["notify-send", "hello world"],
+#     "KEY_F2": ["voice_capture"],
+#     "KEY_F3": ["voice_capture", {'language': 'de'}],
+# }
+
 KEYMAP = {
     "KEY_A": ["notify-send", "hello world"],
-    "KEY_F2": ["voice_capture"],
-    "KEY_F3": ["voice_capture", {'language': 'de'}],
+    "KEY_PASTE": ["voice_capture"],
+    "KEY_CUT": ["voice_capture", {'language': 'de'}],
 }
 
 

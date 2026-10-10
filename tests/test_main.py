@@ -80,7 +80,8 @@ class TestConfig:
         from macrokeyboard.cli import KEYMAP
 
         assert "KEY_A" in KEYMAP
-        assert "KEY_F2" in KEYMAP
+        voice_keys = [k for k, v in KEYMAP.items() if isinstance(v, list) and len(v) >= 1 and v[0] == "voice_capture"]
+        assert len(voice_keys) >= 2, "Should have at least 2 voice keys in KEYMAP"
 
 
 class TestSetupLogging:

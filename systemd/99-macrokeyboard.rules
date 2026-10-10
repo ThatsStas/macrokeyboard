@@ -1,0 +1,2 @@
+# Allow access to input devices for the macro keyboard service
+SUBSYSTEM=="input", GROUP="input", MODE="0660"
