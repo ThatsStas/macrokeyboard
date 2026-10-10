@@ -1,0 +1,5 @@
+#!/usr/bin/env python3
+"""Wrapper for running the macro keyboard CLI."""
+from macrokeyboard.cli import main
+
+main()
