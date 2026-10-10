@@ -9,15 +9,58 @@ import pytest
 class TestConfig:
     """Tests for module-level configuration."""
 
-    def test_voice_command_sentinel(self):
-        """Should recognize voice_capture sentinel."""
+    def test_voice_command_sentinel_no_config(self):
+        """Should recognize bare voice_capture sentinel."""
         from macrokeyboard.cli import is_voice_command
 
-        assert is_voice_command(["voice_capture"]) is True
-        assert is_voice_command(["notify-send", "hello"]) is False
-        assert is_voice_command(["bash", "-c", "echo hi"]) is False
-        assert is_voice_command([]) is False
-        assert is_voice_command("voice_capture") is False  # not a list
+        is_voice, config = is_voice_command(["voice_capture"])
+        assert is_voice is True
+        assert config == {}
+
+    def test_voice_command_with_language_config(self):
+        """Should recognize voice_capture with language config."""
+        from macrokeyboard.cli import is_voice_command
+
+        is_voice, config = is_voice_command(["voice_capture", {"language": "de"}])
+        assert is_voice is True
+        assert config == {"language": "de"}
+
+    def test_voice_command_with_other_config(self):
+        """Should forward arbitrary config dicts."""
+        from macrokeyboard.cli import is_voice_command
+
+        is_voice, config = is_voice_command(["voice_capture", {"language": "fr", "model": "large"}])
+        assert is_voice is True
+        assert config == {"language": "fr", "model": "large"}
+
+    def test_non_voice_command_returns_false(self):
+        """Non-voice commands should return (False, {})."""
+        from macrokeyboard.cli import is_voice_command
+
+        for cmd in [
+            ["notify-send", "hello"],
+            ["bash", "-c", "echo hi"],
+            [],
+        ]:
+            is_voice, config = is_voice_command(cmd)
+            assert is_voice is False
+            assert config == {}
+
+    def test_invalid_input_returns_false(self):
+        """Non-list and malformed inputs should return (False, {})."""
+        from macrokeyboard.cli import is_voice_command
+
+        is_voice, config = is_voice_command("voice_capture")  # not a list
+        assert is_voice is False
+        assert config == {}
+
+        is_voice, config = is_voice_command(["voice_capture", "extra"])  # string instead of dict
+        assert is_voice is False
+        assert config == {}
+
+        is_voice, config = is_voice_command(["voice", "capture"])  # not the sentinel
+        assert is_voice is False
+        assert config == {}
 
     def test_dev_path_configured(self):
         """DEV_PATH should be a valid-looking device path."""
@@ -63,14 +106,30 @@ class TestSetupLogging:
 class TestVoicePipeline:
     """Tests for voice pipeline functions."""
 
-    def test_voice_command_detection(self):
-        """is_voice_command should correctly identify voice commands."""
+    def test_voice_command_detection_no_language(self):
+        """Bare voice_capture returns empty config."""
         from macrokeyboard.cli import is_voice_command
 
-        assert is_voice_command(["voice_capture"]) is True
-        assert is_voice_command(["other_command"]) is False
-        assert is_voice_command(["voice_capture", "extra"]) is False
-        assert is_voice_command(["voice", "capture"]) is False
+        is_voice, config = is_voice_command(["voice_capture"])
+        assert is_voice is True
+        assert config == {}
+
+    def test_voice_command_detection_language(self):
+        """voice_capture with language config extracts it."""
+        from macrokeyboard.cli import is_voice_command
+
+        is_voice, config = is_voice_command(["voice_capture", {"language": "de"}])
+        assert is_voice is True
+        assert config["language"] == "de"
+
+    def test_voice_command_detection_multi_language(self):
+        """Should handle arbitrary config keys."""
+        from macrokeyboard.cli import is_voice_command
+
+        config = {"language": "pl", "foo": "bar"}
+        is_voice, result = is_voice_command(["voice_capture", config])
+        assert is_voice is True
+        assert result == config
 
 
 class TestStopAll:

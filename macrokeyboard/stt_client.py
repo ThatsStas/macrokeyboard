@@ -11,7 +11,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 
-def transcribe(audio_path, endpoint=None, model=None, default_endpoint=None):
+def transcribe(audio_path, endpoint=None, model=None, default_endpoint=None, language=None):
     """Transcribe audio file by POSTing to the STT endpoint.
 
     Args:
@@ -20,6 +20,8 @@ def transcribe(audio_path, endpoint=None, model=None, default_endpoint=None):
                   $STT_ENDPOINT env var, default_endpoint fallback.
         model: Model name. Defaults to $STT_MODEL env var, 'whisper-1'.
         default_endpoint: Module-level default (used by run_macros via INSCRIPT).
+        language: ISO-639-1 language code (e.g. 'en', 'de', 'fr') to guide
+                  the STT model. Omitted for auto-detection.
 
     Returns:
         The transcribed text string.
@@ -31,6 +33,8 @@ def transcribe(audio_path, endpoint=None, model=None, default_endpoint=None):
     model = model or os.environ.get("STT_MODEL", "whisper-1")
 
     logger.info("Submitting %s to %s (model=%s)", audio_path, endpoint, model)
+    if language:
+        logger.info("Language hint: %s", language)
 
     if not os.path.isfile(audio_path):
         raise FileNotFoundError(f"Audio file not found: {audio_path}")
@@ -39,8 +43,11 @@ def transcribe(audio_path, endpoint=None, model=None, default_endpoint=None):
         with open(audio_path, "rb") as f:
             files = {"file": (os.path.basename(audio_path), f, "audio/wav")}
             data = {"model": model, "response_format": "json"}
+            if language:
+                data["language"] = language
 
-            logger.info("POST %s with model=%s", endpoint, model)
+            logger.info("POST %s with model=%s%s", endpoint, model,
+                       f", language={language}" if language else "")
             resp = requests.post(endpoint, files=files, data=data, timeout=120)
             resp.raise_for_status()
             logger.info("Received response (status %d)", resp.status_code)

@@ -36,10 +36,12 @@ VOICE_DEVICE = "plughw:5,0"
 # Default STT endpoint
 INSCRIPT = "http://10.0.0.93:9001/v1/audio/transcriptions"
 
-# Default KEYMAP — customize as needed; add voice key(s) with ['voice_capture']
+# Default KEYMAP — customize as needed.
+# Voice keys: ['voice_capture'] or ['voice_capture', {'language': 'de'}]
 KEYMAP = {
     "KEY_A": ["notify-send", "hello world"],
     "KEY_F2": ["voice_capture"],
+    "KEY_F3": ["voice_capture", {'language': 'de'}],
 }
 
 
@@ -103,15 +105,24 @@ def notify_error(title, message):
 # ============================================================================
 
 
-def run_voice_pipeline(keyname, wav_path):
-    """Transcribe → copy → paste. Runs in a background thread."""
+def run_voice_pipeline(keyname, wav_path, lang_config):
+    """Transcribe → copy → paste. Runs in a background thread.
+
+    Args:
+        keyname: Key that triggered this.
+        wav_path: Path to recorded WAV file.
+        lang_config: Dict with language hint, e.g. {'language': 'de'}.
+    """
     logging.info("[VOICE] %s → starting transcription pipeline", keyname)
+
+    language = lang_config.get("language") if lang_config else None
 
     try:
         i3bar_indicator.stop()
 
-        logging.info("[VOICE] %s → submitting to STT endpoint", keyname)
-        text = stt_transcribe(wav_path, default_endpoint=INSCRIPT)
+        logging.info("[VOICE] %s → submitting to STT endpoint%s",
+                     keyname, f" (language={language})" if language else "")
+        text = stt_transcribe(wav_path, default_endpoint=INSCRIPT, language=language)
 
         if not text:
             logging.warning("[VOICE] %s → empty transcription", keyname)
@@ -142,8 +153,23 @@ def run_voice_pipeline(keyname, wav_path):
 
 
 def is_voice_command(cmd):
-    """Return True if cmd matches the voice_capture sentinel."""
-    return isinstance(cmd, list) and len(cmd) == 1 and cmd[0] == "voice_capture"
+    """Check if a command is the voice_capture sentinel.
+
+    Returns a tuple (is_voice, config) where config is a dict of options
+    (e.g. {'language': 'de'}) or empty dict if none specified.
+    """
+    if not isinstance(cmd, list):
+        return False, {}
+
+    # Exactly ['voice_capture'] — voice with no config
+    if cmd == VOICE_COMMAND:
+        return True, {}
+
+    # ['voice_capture', {...}] — voice with options
+    if len(cmd) == 2 and cmd[0] == "voice_capture" and isinstance(cmd[1], dict):
+        return True, cmd[1]
+
+    return False, {}
 
 
 # ============================================================================
@@ -153,8 +179,11 @@ def is_voice_command(cmd):
 
 def on_key_down(keyname, cmd):
     """Handle key press."""
-    if is_voice_command(cmd):
-        logging.info("[VOICE] %s pressed → start recording", keyname)
+    is_voice, lang_config = is_voice_command(cmd)
+
+    if is_voice:
+        logging.info("[VOICE] %s pressed → start recording%s",
+                     keyname, f" (language={lang_config.get('language')})" if lang_config else "")
 
         if keyname in voice_processes:
             logging.warning("[VOICE] %s already has an active voice process", keyname)
@@ -167,7 +196,11 @@ def on_key_down(keyname, cmd):
             i3bar_indicator.show_error("Failed to start recording — check microphone")
             return
 
-        voice_processes[keyname] = {"handle": handle, "capture": voice_capture}
+        voice_processes[keyname] = {
+            "handle": handle,
+            "capture": voice_capture,
+            "lang_config": lang_config,
+        }
         i3bar_indicator.start()
         logging.info("[VOICE] %s → recording started (PID %d)", keyname, handle.pid)
     else:
@@ -178,7 +211,9 @@ def on_key_down(keyname, cmd):
 
 def on_key_up(keyname, cmd):
     """Handle key release."""
-    if is_voice_command(cmd):
+    is_voice, lang_config = is_voice_command(cmd)
+
+    if is_voice:
         logging.info("[VOICE] %s released → stop recording", keyname)
 
         entry = voice_processes.get(keyname)
@@ -199,7 +234,7 @@ def on_key_up(keyname, cmd):
 
         thread = threading.Thread(
             target=run_voice_pipeline,
-            args=(keyname, wav_path),
+            args=(keyname, wav_path, lang_config),
             daemon=True,
             name=f"voice-pipeline-{keyname}",
         )

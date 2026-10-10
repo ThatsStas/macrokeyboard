@@ -38,6 +38,18 @@ Press a key → start recording (with a notification) → release key → transc
    }
    ```
 
+    **Language support:** add a second element to the command list to specify the language (ISO-639-1 code):
+    ```python
+    KEYMAP = {
+        'KEY_F2': ['voice_capture'],            # auto-detect language
+        'KEY_F3': ['voice_capture', {'language': 'de'}],  # German
+        'KEY_F4': ['voice_capture', {'language': 'fr'}],  # French
+        'KEY_F5': ['voice_capture', {'language': 'pl'}],  # Polish
+    }
+    ```
+
+    The `language` value is passed as the Whisper API `language` parameter, which guides the model to transcribe in that language for better accuracy. If omitted, the endpoint auto-detects.
+
 5. Set the microphone device (edit `VOICE_DEVICE` in `run_macros.py`):
    ```python
    VOICE_DEVICE = "plughw:5,0"  # Logitech C920 webcam mic

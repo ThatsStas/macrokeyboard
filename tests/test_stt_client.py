@@ -79,6 +79,36 @@ class TestTranscribe:
         data = call_args[1].get("data", {})
         assert data.get("model") == "whisper-large-v3"
 
+    def test_passes_language_when_set(self, tmp_wav_file, mock_requests_post):
+        """Should include language in API data when specified."""
+        from macrokeyboard.stt_client import transcribe
+
+        transcribe(tmp_wav_file, language="de")
+
+        call_args = mock_requests_post.call_args
+        data = call_args[1].get("data", {})
+        assert data.get("language") == "de"
+
+    def test_does_not_include_language_when_none(self, tmp_wav_file, mock_requests_post):
+        """Should not include language key when no language specified."""
+        from macrokeyboard.stt_client import transcribe
+
+        transcribe(tmp_wav_file)
+
+        call_args = mock_requests_post.call_args
+        data = call_args[1].get("data", {})
+        assert "language" not in data
+
+    def test_language_supported_for_multiple_languages(self, tmp_wav_file, mock_requests_post):
+        """Should handle various language codes."""
+        from macrokeyboard.stt_client import transcribe
+
+        for lang in ["en", "fr", "pl", "ru", "ja"]:
+            transcribe(tmp_wav_file, language=lang)
+            call_args = mock_requests_post.call_args
+            data = call_args[1].get("data", {})
+            assert data.get("language") == lang
+
     def test_raises_file_not_found(self):
         """Should raise FileNotFoundError for non-existent file."""
         from macrokeyboard.stt_client import transcribe
@@ -118,3 +148,14 @@ class TestTranscribe:
 
         with pytest.raises(requests_lib.HTTPError):
             transcribe(tmp_wav_file)
+
+    def test_language_with_model(self, tmp_wav_file, mock_requests_post):
+        """Should include both language and model in API call."""
+        from macrokeyboard.stt_client import transcribe
+
+        transcribe(tmp_wav_file, model="large-v3", language="de")
+
+        call_args = mock_requests_post.call_args
+        data = call_args[1].get("data", {})
+        assert data.get("model") == "large-v3"
+        assert data.get("language") == "de"
