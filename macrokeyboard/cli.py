@@ -21,7 +21,7 @@ from evdev import InputDevice, categorize, ecodes
 # Configuration
 # ============================================================================
 
-DEV_PATH = "/dev/input/by-id/usb-Falbatech_The_Redox_Keyboard-event-kbd"
+DEV_PATH = "/dev/input/by-id/usb-You_Streamdeck-event-kbd"
 
 # Log file path
 _LOG_DIR = os.environ.get("MACRO_LOG_DIR", os.path.dirname(os.path.abspath(__file__)))
