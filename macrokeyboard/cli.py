@@ -48,6 +48,7 @@ KEYMAP = {
     "KEY_A": ["notify-send", "hello world"],
     "KEY_PASTE": ["voice_capture"],
     "KEY_CUT": ["voice_capture", {'language': 'de'}],
+    "KEY_COPY": ["xdotool", "key", "Return"],
 }
 
 
